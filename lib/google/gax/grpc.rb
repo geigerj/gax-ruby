@@ -49,10 +49,17 @@ module Google
 
       def deserialize_error_status_details(error)
         return unless error.is_a? GRPC::BadStatus
-        details =
-          GRPC::GoogleRpcStatusUtils.extract_google_rpc_status(
-            error.to_status
-          ).details
+        # If error status is malformed, swallow the gRPC error that gets raised.
+        begin
+          details =
+            GRPC::GoogleRpcStatusUtils.extract_google_rpc_status(
+              error.to_status
+            ).details
+        rescue
+          return "Could not parse error details due to a malformed server "\
+                 "response trailer."
+        end
+        return if details.nil?
         details.map do |any|
           # If the type of the proto wrapped by the Any instance is not
           # available, do not deserialize.
